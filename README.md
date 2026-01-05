@@ -1,74 +1,60 @@
-# 📊 SQL Server Monitoring with Zabbix & Grafana
+# 🔍 SQL Server Comprehensive Monitoring Solution
 
-SQL Server monitoring project using **Zabbix** for metrics collection and alerting, and **Grafana** for real-time visualization.  
-The architecture is designed to provide **observability, performance monitoring, and proactive incident detection** for SQL Server environments.
+<div align="center">
 
----
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![SQL Server](https://img.shields.io/badge/SQL%20Server-2012+-CC2927?logo=microsoftsqlserver)](https://www.microsoft.com/sql-server)
+[![Zabbix](https://img.shields.io/badge/Zabbix-5.0+-D40000?logo=zabbix)](https://www.zabbix.com/)
+[![Grafana](https://img.shields.io/badge/Grafana-8.0+-F46800?logo=grafana)](https://grafana.com/)
+[![Ubuntu](https://img.shields.io/badge/Ubuntu-20.04+-E95420?logo=ubuntu)](https://ubuntu.com/)
+[![Windows Server](https://img.shields.io/badge/Windows%20Server-2016+-0078D6?logo=windows)](https://www.microsoft.com/windows-server)
 
-## 🏗️ Architecture Overview
+**Enterprise-grade monitoring solution for SQL Server environments with real-time dashboards, proactive alerts, and comprehensive performance tracking.**
 
-### Ubuntu Server
-- Zabbix Server
-- Official MSSQL Zabbix integration
-- MySQL database for metrics storage
-- Grafana for dashboards and visualization
+</div>
 
-### Windows Server
-- SQL Server (monitored instance)
+## 📊 Live Dashboard Preview
 
-Zabbix collects metrics from SQL Server using its official MSSQL integration and stores the data in MySQL. Grafana consumes Zabbix data to display real-time dashboards.
+<div align="center">
+  <img src="https://via.placeholder.com/900x450.png/0078D6/ffffff?text=SQL+Server+Performance+Dashboard" alt="Dashboard Preview" width="800"/>
+  <br/>
+  <em>Real-time monitoring dashboard showing SQL Server performance metrics</em>
+</div>
 
----
+## 🎯 Features at a Glance
 
-## 🔄 Monitoring Flow
+| Feature | Description | Benefits |
+|---------|-------------|----------|
+| **📈 Real-time Monitoring** | Live metrics collection every 30 seconds | Immediate visibility into performance issues |
+| **🚨 Proactive Alerting** | Custom triggers for critical conditions | Prevent downtime before it happens |
+| **📊 Historical Analysis** | Data retention up to 1 year | Trend analysis and capacity planning |
+| **🔍 Query Performance** | Top expensive queries tracking | Identify and optimize slow-running queries |
+| **💾 Backup Monitoring** | Automated backup success/failure tracking | Ensure data recoverability |
+| **📱 Multi-platform** | Ubuntu + Windows integration | Covers heterogeneous environments |
+| **🐳 Docker Ready** | Containerized deployment options | Quick setup and scalability |
 
-1. SQL Server runs on Windows Server
-2. Zabbix Server (Ubuntu) collects SQL Server metrics
-3. Metrics are stored in MySQL (Zabbix backend)
-4. Grafana queries Zabbix to render dashboards
-5. Zabbix triggers alerts when thresholds are exceeded
+## 🏗️ System Architecture
 
----
-
-## 📈 Metrics Collected
-
-- SQL Server availability and uptime
-- CPU, memory, and disk usage
-- Active sessions and connections
-- Database file size and free space
-- Performance indicators and latency
-- Backup status and execution history
-- SQL Agent job status
-
----
-
-## 🚨 Alerting
-
-Zabbix is responsible for alerting based on predefined triggers, allowing:
-- Early detection of performance degradation
-- Proactive incident response
-- Improved availability and reliability
-
-Alerts can be delivered via email, webhooks, or integrated notification systems.
-
----
-
-## 🧰 Technologies Used
-
-- Microsoft SQL Server
-- Windows Server
-- Ubuntu Server
-- Zabbix
-- Grafana
-- MySQL
-
----
-
-## ⚙️ SQL Server Monitoring Account (Example)
-
-```sql
-USE master;
-CREATE LOGIN zabbix_monitor WITH PASSWORD = 'Strong@Password!';
-CREATE USER zabbix_monitor FOR LOGIN zabbix_monitor;
-GRANT VIEW SERVER STATE TO zabbix_monitor;
-GRANT VIEW ANY DEFINITION TO zabbix_monitor;
+```mermaid
+graph TB
+    subgraph "Windows Server"
+        SQL[SQL Server 2022]
+        ZA[Zabbix Agent 6.0]
+        
+        SQL -- "Performance Counters<br>SQL Queries" --> ZA
+        ZA -- "Encrypted Connection<br>TCP 10051" --> ZS
+    end
+    
+    subgraph "Ubuntu Server 22.04"
+        ZS[Zabbix Server]
+        DB[(MySQL 8.0<br>Metrics Storage)]
+        GF[Grafana 9.0<br>Dashboards]
+        NG[Nginx<br>Reverse Proxy]
+        
+        ZS -- "Store Metrics" --> DB
+        GF -- "Query Data" --> ZS
+        NG -- "SSL Termination" --> GF
+    end
+    
+    Admin[Administrator] -- "Access Dashboards<br>HTTPS 443" --> NG
+    Alert[Alert System] -- "Email/SMS/Teams" --> ZS
