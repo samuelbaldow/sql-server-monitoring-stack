@@ -2,11 +2,12 @@
 
 Solução completa de monitoramento para SQL Server e bancos de dados, utilizando as ferramentas Zabbix e Grafana para visualização em tempo real de métricas e alertas.
 
-![Zabbix](https://img.shields.io/badge/Zabbix-Monitoring-orange?logo=zabbix)
+![Zabbix](https://img.shields.io/badge/Zabbix-Monitoring-orange?logo=zabbix&logoColor=white)
 ![Grafana](https://img.shields.io/badge/Grafana-Dashboard-orange?logo=grafana)
-![SQL Server](https://img.shields.io/badge/SQL%20Server-Database-blue?logo=microsoftsqlserver)
+![SQL Server](https://img.shields.io/badge/SQL%20Server-Database-blue?logo=microsoftsqlserver&logoColor=white)
+![MySQL](https://img.shields.io/badge/MySQL-Database-00758F?logo=mysql&logoColor=white)
 ![Ubuntu](https://img.shields.io/badge/Ubuntu-Server-orange?logo=ubuntu)
-![Windows](https://img.shields.io/badge/Windows-Server-blue?logo=windows)
+![Windows](https://img.shields.io/badge/Windows-Server-blue?logo=windows11&logoColor=white)
 
 ## 📋 Índice
 
