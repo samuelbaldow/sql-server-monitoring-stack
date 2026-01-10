@@ -34,9 +34,6 @@ Este projeto implementa uma solução robusta de monitoramento para instâncias 
 
 ## 🏗️ Arquitetura
 
-A solução é composta por dois servidores principais:
-
-
 ```mermaid
 flowchart TB
  subgraph subGraph0["Windows Server"]
@@ -59,6 +56,7 @@ flowchart TB
     n1@{ shape: db}
     n2@{ shape: db}
 ```
+A solução é composta por dois servidores principais:
 
 ### Ubuntu Server - Servidor de Monitoramento
 
