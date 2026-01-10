@@ -36,39 +36,31 @@ Este projeto implementa uma solução robusta de monitoramento para instâncias 
 
 A solução é composta por dois servidores principais:
 
-### Ubuntu Server - Servidor de Monitoramento
 
+```mermaid
+flowchart TB
+ subgraph subGraph0["Windows Server"]
+        SQL["SQL Server"]
+        ZA["Zabbix Agent2"]
+        n1["Database"]
+        n2["Database"]
+  end
+ subgraph subGraph1["Ubuntu Server"]
+        ZS["Zabbix Server"]
+        DB[("MySQL Database")]
+        GF["Grafana"]
+  end
+    SQL <-- ODBC Connection --> ZA
+    ZS -- Store Metrics --> DB
+    GF -- Query Data --> ZS
+    ZA <-. Push Metrics .-> ZS
+    SQL --- n1 & n2
+
+    n1@{ shape: db}
+    n2@{ shape: db}
 ```
-┌─────────────────────────────────────┐
-│      Ubuntu Server                  │
-│                                     │
-│  ┌─────────────┐  ┌─────────────┐  │
-│  │   Zabbix    │  │   Grafana   │  │
-│  │   Server    │  │  Dashboard  │  │
-│  │   (Frontend)│  │             │  │
-│  └──────┬──────┘  └──────┬──────┘  │
-│         │                  │        │
-│         └────────┬─────────┘        │
-│                  │                  │
-│         ┌────────▼────────┐        │
-│         │     MySQL       │        │
-│         │  (Banco Zabbix) │        │
-│         └─────────────────┘        │
-└─────────────────────────────────────┘
-         │
-         │ Coleta de Métricas
-         │ via Zabbix Agent
-         │
-┌────────▼─────────────────────────────┐
-│     Windows Server                   │
-│                                     │
-│  ┌─────────────┐  ┌─────────────┐  │
-│  │ Zabbix      │  │  SQL Server │  │
-│  │   Agent     │  │ + Bancos    │  │
-│  └──────┬──────┘  └─────────────┘  │
-│         │                            │
-└─────────┴────────────────────────────┘
-```
+
+### Ubuntu Server - Servidor de Monitoramento
 
 **Componentes do Ubuntu Server:**
 
@@ -76,6 +68,9 @@ A solução é composta por dois servidores principais:
 - **MySQL**: Banco de dados para armazenamento de métricas coletadas
 - **Grafana**: Visualização de dashboards e gráficos em tempo real
 - **mssql-zabbix**: Templates e scripts para integração SQL Server com Zabbix
+
+
+### Windows Server - SQL Server
 
 **Componentes do Windows Server:**
 
