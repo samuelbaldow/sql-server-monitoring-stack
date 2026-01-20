@@ -484,35 +484,7 @@ Para ambientes de produção, considere:
 
 - [Documentação Oficial Zabbix](https://www.zabbix.com/documentation)
 - [Documentação Oficial Grafana](https://grafana.com/docs/)
-- [MSSQL-Zabbix GitHub](https://github.com/dbafromthecold/mssql-zabbix)
 - [Zabbix Community](https://www.zabbix.com/forum/)
-
-## 🤝 Contribuição
-
-Contribuições são bem-vindas! Sinta-se à vontade para:
-
-1. Fazer fork do projeto
-2. Criar uma branch para sua feature (`git checkout -b feature/NovaFuncionalidade`)
-3. Commit suas mudanças (`git commit -m 'Adiciona nova funcionalidade'`)
-4. Push para a branch (`git push origin feature/NovaFuncionalidade`)
-5. Abrir um Pull Request
-
-## 📝 Changelog
-
-### [v1.0.0] - 2024
-- Release inicial
-- Monitoramento básico SQL Server
-- Dashboards Grafana
-- Integração Zabbix + Grafana
-- Documentação completa
-
-## 📄 Licença
-
-Este projeto é licenciado sob a Licença MIT - veja o arquivo [LICENSE](LICENSE) para detalhes.
-
-## 👨‍💻 Autor
-
-**Seu Nome** - [Seu GitHub](https://github.com/seu-usuario)
 
 ## 🙏 Agradecimentos
 
@@ -522,4 +494,4 @@ Este projeto é licenciado sob a Licença MIT - veja o arquivo [LICENSE](LICENSE
 
 ---
 
-⭐ **Se este projeto foi útil para você, considere dar uma estrela no GitHub!**
+
