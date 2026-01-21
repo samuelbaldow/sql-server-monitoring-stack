@@ -1,497 +1,371 @@
-# 📊 SQL Server Monitoring Solution
+# 🔄 SQL Server Database Mirroring - Guia Completo
 
-Solução completa de monitoramento para SQL Server e bancos de dados, utilizando as ferramentas Zabbix e Grafana para visualização em tempo real de métricas e alertas.
+[![SQL Server](https://img.shields.io/badge/SQL%20Server-2019%2B-blue)](https://www.microsoft.com/en-us/sql-server/)
+[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![Documentation](https://img.shields.io/badge/Documentation-Complete-orange.svg)](docs/)
 
-![Zabbix](https://img.shields.io/badge/Zabbix-Monitoring-orange?logo=zabbix&logoColor=white)
-![Grafana](https://img.shields.io/badge/Grafana-Dashboard-orange?logo=grafana)
-![SQL Server](https://img.shields.io/badge/SQL%20Server-Database-blue?logo=microsoftsqlserver&logoColor=white)
-![MySQL](https://img.shields.io/badge/MySQL-Database-00758F?logo=mysql&logoColor=white)
-![Ubuntu](https://img.shields.io/badge/Ubuntu-Server-orange?logo=ubuntu)
-![Windows](https://img.shields.io/badge/Windows-Server-blue?logo=windows11&logoColor=white)
+> Um guia completo e educativo sobre como implementar e gerenciar Database Mirroring no SQL Server.
 
 ## 📋 Índice
 
-- [Visão Geral](#visão-geral)
-- [Arquitetura](#arquitetura)
-- [Pré-requisitos](#pré-requisitos)
-- [Instalação e Configuração](#instalação-e-configuração)
-- [Métricas Monitoradas](#métricas-monitoradas)
-- [Dashboards](#dashboards)
-- [Troubleshooting](#troubleshooting)
-- [Contribuição](#contribuição)
-- [Licença](#licença)
+- [Sobre](#-sobre)
+- [O que é Database Mirroring](#-o-que-é-database-mirroring)
+- [Quando Usar](#-quando-usar)
+- [Arquitetura](#-arquitetura)
+- [Modos de Operação](#-modos-de-operação)
+- [Pré-requisitos](#-pré-requisitos)
+- [Instalação Rápida](#-instalação-rápida)
+- [Documentação](#-documentação)
+- [Scripts Prontos](#-scripts-prontos)
+- [Contribuindo](#-contribuindo)
+- [Licença](#-licença)
 
-## 🎯 Visão Geral
+## 📖 Sobre
 
-Este projeto implementa uma solução robusta de monitoramento para instâncias SQL Server, permitindo:
+Este repositório fornece um tutorial completo e passo-a-passo sobre Database Mirroring no SQL Server. O objetivo é ajudar desenvolvedores e DBAs a entender, implementar e gerenciar soluções de alta disponibilidade usando Database Mirroring.
 
-- Monitoramento em tempo real de performance e disponibilidade
-- Alertas automáticos para eventos críticos
-- Dashboards visuais intuitivos no Grafana
-- Histórico de métricas para análise de tendências
-- Monitoramento de múltiplos bancos de dados em uma mesma instância
-- Integração entre Zabbix e Grafana para visualização avançada
+## 🎯 O que é Database Mirroring
+
+**Database Mirroring** é uma solução de alta disponibilidade do SQL Server que mantém duas cópias de um banco de dados sincronizadas em diferentes servidores. Isso permite:
+
+- ✅ **Alta Disponibilidade**: Failover automático em caso de falha
+- ✅ **Recuperação de Desastres**: Cópia do banco de dados em local diferente
+- ✅ **Proteção de Dados**: Dados são copiados em tempo real
+
+### Arquitetura Básica
+
+```
+┌─────────────────┐                 ┌─────────────────┐
+│   PRINCIPAL     │◄──────────────►│    MIRROR       │
+│   (Principal)   │                 │   (Espelho)     │
+│                 │                 │                 │
+│  • Ativo        │                 │  • Inativo      │
+│  • Aceita       │                 │  • Em sincronia │
+│    conexões     │                 │  • Em standby   │
+│  • Aplicação    │                 │                 │
+└─────────────────┘                 └─────────────────┘
+         │                                    │
+         │                                    │
+         └──────────────────┬────────────────┘
+                            │
+                    ┌───────▼───────┐
+                    │  WITNESS      │
+                    │  (Testemunha) │
+                    │               │
+                    │  • Opcional   │
+                    │  • Facilita   │
+                    │    failover   │
+                    │    automático │
+                    └───────────────┘
+```
+
+## 🔄 Quando Usar Database Mirroring
+
+### ✅ Use Database Mirroring quando:
+
+- Precisa de alta disponibilidade para um banco de dados crítico
+- Quer failover rápido (segundos)
+- Tem SQL Server Standard Edition
+- Precisa de uma solução simples de HA
+- Budget limitado para AlwaysOn Availability Groups
+
+### ❌ Considere Alternativas quando:
+
+- Tem múltiplos bancos de dados para proteger
+- Precisa de leitura no servidor secundário
+- Usa SQL Server Enterprise Edition
+- Precisa de escala horizontal (read scaling)
+
+> 💡 **Nota**: Para novas implementações, considere **AlwaysOn Availability Groups**, que é a solução moderna de HA do SQL Server.
 
 ## 🏗️ Arquitetura
 
-```mermaid
-flowchart TB
- subgraph subGraph0["Windows Server"]
-        SQL["SQL Server"]
-        ZA["Zabbix Agent2"]
-        n1["Database"]
-        n2["Database"]
-  end
- subgraph subGraph1["Ubuntu Server"]
-        ZS["Zabbix Server"]
-        DB[("MySQL Database")]
-        GF["Grafana"]
-  end
-    SQL <-- ODBC Connection --> ZA
-    ZS -- Store Metrics --> DB
-    GF -- Query Data --> ZS
-    ZA <-. Push Metrics .-> ZS
-    SQL --- n1 & n2
+### Componentes
 
-    n1@{ shape: db}
-    n2@{ shape: db}
-```
-A solução é composta por dois servidores principais:
+| Componente | Descrição | Necessidade |
+|------------|-----------|-------------|
+| **Principal** | Servidor ativo que aceita conexões | ✅ Obrigatório |
+| **Mirror** | Servidor secundário em standby | ✅ Obrigatório |
+| **Witness** | Servidor testemunha para failover automático | ⚠️ Opcional |
+| **Endpoint** | Porta TCP para comunicação entre servidores | ✅ Obrigatório |
 
-### Ubuntu Server - Servidor de Monitoramento
+### Modos de Operação
 
-**Componentes do Ubuntu Server:**
+#### 1. High Safety (Síncrono)
+- Dados são gravados no principal E no mirror
+- **Failover automático** (com witness)
+- Zero perda de dados
+- Alta latência
 
-- **Zabbix Server**: Sistema de monitoramento centralizado
-- **MySQL**: Banco de dados para armazenamento de métricas coletadas
-- **Grafana**: Visualização de dashboards e gráficos em tempo real
-- **mssql-zabbix**: Templates e scripts para integração SQL Server com Zabbix
-
-
-### Windows Server - SQL Server
-
-**Componentes do Windows Server:**
-
-- **SQL Server**: Instância do banco de dados Microsoft SQL Server
-- **Bancos de Dados**: Base de dados a serem monitoradas
-- **Zabbix Agent**: Agente responsável pela coleta de métricas do SQL Server
+#### 2. High Performance (Assíncrono)
+- Dados são gravados apenas no principal
+- **Sem failover automático**
+- Possível perda de dados em caso de falha
+- Baixa latência
 
 ## 📦 Pré-requisitos
 
-### Ubuntu Server (Monitoramento)
-- Ubuntu Server 20.04 ou superior
-- Mínimo de 4GB RAM (8GB recomendado)
-- 50GB de espaço em disco
-- Acesso de root ou sudo
-- Conexão com internet para download de pacotes
+### Requisitos do SQL Server
+- ✅ SQL Server 2008 ou superior
+- ✅ Recovery Model: **FULL**
+- ✅ Backup completo inicial do banco de dados
 
-### Windows Server (SQL Server)
-- Windows Server 2016 ou superior
-- SQL Server 2016 ou superior
-- 4GB RAM mínimos (depende da carga de trabalho SQL)
-- Acesso administrativo
-- Conectividade de rede com o Ubuntu Server
+### Requisitos de Rede
+- ✅ Conectividade TCP entre servidores
+- ✅ Porta específica para endpoint (default: 5022)
+- ✅ Latência recomendada: < 1ms para síncrono
 
-## 🚀 Instalação e Configuração
+### Requisitos de Hardware
+- ✅ CPU e memória similares em ambos os servidores
+- ✅ Armazenamento adequado para logs
 
-### 1️⃣ Ubuntu Server - Instalação do Zabbix
+> 📖 **Pré-requisitos detalhados**: Veja [docs/01-pre-requisitos.md](docs/01-pre-requisitos.md)
 
-#### Instalação do Zabbix Server + MySQL
+## 🚀 Instalação Rápida
 
-```bash
-# Atualizar sistema
-sudo apt update && sudo apt upgrade -y
-
-# Instalar MySQL Server
-sudo apt install -y mysql-server
-
-# Configurar banco de dados para Zabbix
-sudo mysql -u root -p
-```
+### Passo 1: Preparar o Banco de Dados
 
 ```sql
-CREATE DATABASE zabbix CHARACTER SET utf8mb4 COLLATE utf8mb4_bin;
-CREATE USER 'zabbix'@'localhost' IDENTIFIED BY 'sua_senha_segura';
-GRANT ALL PRIVILEGES ON zabbix.* TO 'zabbix'@'localhost';
-FLUSH PRIVILEGES;
-EXIT;
-```
-
-```bash
-# Adicionar repositório Zabbix
-wget https://repo.zabbix.com/zabbix/6.4/ubuntu/pool/main/z/zabbix-release/zabbix-release_6.4-1+ubuntu22.04_all.deb
-sudo dpkg -i zabbix-release_6.4-1+ubuntu22.04_all.deb
-sudo apt update
-
-# Instalar Zabbix Server, Frontend e Agent
-sudo apt install -y zabbix-server-mysql zabbix-frontend-php zabbix-apache-conf zabbix-sql-scripts zabbix-agent
-
-# Importar esquema do banco de dados
-zcat /usr/share/zabbix-sql-scripts/mysql/server.sql.gz | mysql --default-character-set=utf8mb4 -uzabbix -p zabbix
-
-# Configurar Zabbix Server
-sudo nano /etc/zabbix/zabbix_server.conf
-```
-
-Editar as seguintes linhas no arquivo de configuração:
-```ini
-DBPassword=sua_senha_segura
-```
-
-```bash
-# Iniciar serviços
-sudo systemctl restart zabbix-server zabbix-agent apache2
-sudo systemctl enable zabbix-server zabbix-agent apache2
-
-# Ajustar timezone PHP
-sudo nano /etc/zabbix/apache.conf
-# Descomentar e ajustar: date.timezone = America/Sao_Paulo
-sudo systemctl restart apache2
-```
-
-Acesse o Zabbix Frontend: `http://seu-ip-ubuntu/zabbix`
-
-### 2️⃣ Instalação do Grafana
-
-```bash
-# Adicionar repositório Grafana
-sudo wget -q -O - https://packages.grafana.com/gpg.key | sudo apt-key add -
-echo "deb https://packages.grafana.com/oss/deb stable main" | sudo tee /etc/apt/sources.list.d/grafana.list
-
-# Instalar Grafana
-sudo apt update
-sudo apt install -y grafana
-
-# Iniciar Grafana
-sudo systemctl start grafana-server
-sudo systemctl enable grafana-server
-```
-
-Acesse o Grafana: `http://seu-ip-ubuntu:3000` (usuário/senha: admin/admin)
-
-#### Integração Zabbix com Grafana
-
-1. Instalar plugin Zabbix no Grafana:
-```bash
-sudo grafana-cli plugins install alexanderzobnin-zabbix-app
-sudo systemctl restart grafana-server
-```
-
-2. Ativar o plugin no Grafana: Settings → Plugins → Zabbix → Enable
-
-3. Configurar datasource Zabbix: Configuration → Data Sources → Add data source → Zabbix
-
-### 3️⃣ Configuração do mssql-zabbix
-
-```bash
-# Clonar repositório mssql-zabbix
-cd /opt
-sudo git clone https://github.com/dbafromthecold/mssql-zabbix.git
-cd mssql-zabbix
-
-# Copiar scripts do Zabbix Agent
-sudo cp scripts/* /etc/zabbix/scripts/
-sudo chmod +x /etc/zabbix/scripts/*.ps1
-
-# Importar templates no Zabbix
-# Acesse: Configuration → Templates → Import
-# Selecione os arquivos .xml do repositório
-```
-
-### 4️⃣ Windows Server - Configuração do Zabbix Agent
-
-#### Instalação do Zabbix Agent
-
-```powershell
-# Baixar Zabbix Agent
-Invoke-WebRequest -Uri "https://cdn.zabbix.com/zabbix/binaries/stable/6.4/6.4.0/zabbix_agent-6.4.0-windows-amd64-openssl.msi" -OutFile "zabbix_agent.msi"
-
-# Instalar
-msiexec /i zabbix_agent.msi SERVER="IP_DO_UBUNTU" SERVERACTIVE="IP_DO_UBUNTU" HOSTNAME="SQL-Server" /qn
-
-# Configurar permissões do Firewall
-New-NetFirewallRule -DisplayName "Zabbix Agent" -Direction Inbound -Protocol TCP -LocalPort 10050 -Action Allow
-
-# Iniciar serviço
-Start-Service ZabbixAgent
-Set-Service ZabbixAgent -StartupType Automatic
-```
-
-#### Configuração de Monitoramento SQL Server
-
-No Windows Server, certifique-se de que:
-
-1. **Permissões SQL Server** - Crie um usuário com permissões de leitura:
-```sql
+-- No servidor Principal
 USE master;
-CREATE LOGIN zabbix_monitor WITH PASSWORD = 'senha_segura';
-GRANT VIEW SERVER STATE TO zabbix_monitor;
-GRANT SELECT ON sys.databases TO zabbix_monitor;
+GO
+
+-- Verificar recovery model
+SELECT name, recovery_model_desc
+FROM sys.databases
+WHERE name = 'SuaDatabase';
+GO
+
+-- Alterar para FULL se necessário
+ALTER DATABASE SuaDatabase SET RECOVERY FULL;
+GO
+
+-- Fazer backup completo
+BACKUP DATABASE SuaDatabase
+TO DISK = 'C:\Backups\SuaDatabase_full.bak'
+WITH FORMAT, COMPRESSION;
+GO
+
+-- Fazer backup do log
+BACKUP LOG SuaDatabase
+TO DISK = 'C:\Backups\SuaDatabase_log.trn'
+WITH COMPRESSION;
+GO
 ```
 
-2. **Configuração do Agent** - Edite `C:\Program Files\Zabbix Agent\zabbix_agentd.conf`:
-```ini
-Server=IP_DO_UBUNTU
-ServerActive=IP_DO_UBUNTU
-Hostname=SQL-Server
+### Passo 2: Restaurar no Mirror
+
+```sql
+-- No servidor Mirror
+RESTORE DATABASE SuaDatabase
+FROM DISK = '\\Principal\Backups\SuaDatabase_full.bak'
+WITH NORECOVERY, REPLACE;
+GO
+
+RESTORE LOG SuaDatabase
+FROM DISK = '\\Principal\Backups\SuaDatabase_log.trn'
+WITH NORECOVERY;
+GO
 ```
 
-3. **Reiniciar Agente**:
-```powershell
-Restart-Service ZabbixAgent
+### Passo 3: Configurar Endpoints
+
+```sql
+-- No servidor Principal
+CREATE ENDPOINT Mirroring
+STATE = STARTED
+AS TCP (LISTENER_PORT = 5022)
+FOR DATABASE_MIRRORING (ROLE = ALL);
+GO
+
+-- No servidor Mirror
+CREATE ENDPOINT Mirroring
+STATE = STARTED
+AS TCP (LISTENER_PORT = 5022)
+FOR DATABASE_MIRRORING (ROLE = ALL);
+GO
 ```
 
-#### Adicionar Host no Zabbix
+### Passo 4: Configurar Mirroring
 
-1. Acesse o Zabbix Frontend
-2. Configuration → Hosts → Create host
-3. Preencha:
-   - **Host name**: SQL-Server
-   - **Groups**: Linux servers (ou crie grupo Windows Servers)
-   - **Agent interfaces**: IP do Windows Server, Port 10050
-4. Na aba **Templates**, adicione os templates do mssql-zabbix:
-   - MSSQL by Zabbix Agent
-   - MSSQL Database by Zabbix Agent
-5. Clique em **Add**
+```sql
+-- No servidor Mirror
+ALTER DATABASE SuaDatabase
+SET PARTNER = 'TCP://PrincipalServer:5022';
+GO
 
-## 📈 Métricas Monitoradas
+-- No servidor Principal
+ALTER DATABASE SuaDatabase
+SET PARTNER = 'TCP://MirrorServer:5022';
+GO
 
-A solução monitora as seguintes categorias de métricas:
+-- Opcional: Adicionar Witness (em ambos servidores)
+ALTER DATABASE SuaDatabase
+SET WITNESS = 'TCP://WitnessServer:5022';
+GO
+```
 
-### 🖥️ SQL Server Instance
+> 📚 **Tutorial completo**: Veja [docs/03-tutorial-passo-a-passo.md](docs/03-tutorial-passo-a-passo.md)
 
-- **Uptime do SQL Server**
-- **Versão e Edition do SQL Server**
-- **Conexões Ativas**
-- **Transações por Segundo**
-- **Batch Requests por Segundo**
-- **Compilações SQL por Segundo**
-- **Recompilações SQL por Segundo**
-- **Page Life Expectancy**
-- **Buffer Cache Hit Ratio**
-- **Memory Usage**
+## 📚 Documentação
 
-### 💾 Databases
+| Documento | Descrição |
+|-----------|-----------|
+| [01-pré-requisitos.md](docs/01-pre-requisitos.md) | Requisitos detalhados e preparação do ambiente |
+| [02-conceitos-fundamentais.md](docs/02-conceitos-fundamentais.md) | Conceitos fundamentais e arquitetura |
+| [03-tutorial-passo-a-passo.md](docs/03-tutorial-passo-a-passo.md) | Tutorial completo de configuração |
+| [04-monitoramento.md](docs/04-monitoramento.md) | Como monitorar e manter o mirroring |
+| [05-troubleshooting.md](docs/05-troubleshooting.md) | Resolução de problemas comuns |
+| [06-melhores-praticas.md](docs/06-melhores-praticas.md) | Melhores práticas e recomendações |
 
-- **Status do Banco de Dados**
-- **Tamanho do Banco (Data + Log)**
-- **Uso de Espaço em Disco**
-- **Transações por Segundo**
-- **Queries Ativas**
-- **Deadlocks**
-- **Bloqueios (Locks)**
-- **Tempo de Resposta de Queries**
-- **Backup Status**
-- **Último Backup Data/Log**
+## 💻 Scripts Prontos
 
-### 📊 Performance
+Scripts SQL prontos para uso estão disponíveis na pasta `/scripts`:
 
-- **CPU Usage**
-- **Memory Usage**
-- **Disk I/O**
-- **Network Latency**
-- **Wait Stats**
-- **Latches e Spinlocks**
+| Script | Descrição |
+|--------|-----------|
+| [01-configurar-endpoint.sql](scripts/01-configurar-endpoint.sql) | Configurar endpoints de mirroring |
+| [02-iniciar-mirroring.sql](scripts/02-iniciar-mirroring.sql) | Iniciar configuração do mirroring |
+| [03-adicionar-witness.sql](scripts/03-adicionar-witness.sql) | Adicionar servidor testemunha |
+| [04-monitoramento.sql](scripts/04-monitoramento.sql) | Scripts de monitoramento |
+| [05-failover-manual.sql](scripts/05-failover-manual.sql) | Realizar failover manual |
+| [06-remover-mirroring.sql](scripts/06-remover-mirroring.sql) | Remover configuração de mirroring |
 
-### 🚨 Alertas Configurados
+```bash
+# Exemplo de uso
+sqlcmd -S PrincipalServer -U sa -P password -i scripts/01-configurar-endpoint.sql
+sqlcmd -S MirrorServer -U sa -P password -i scripts/01-configurar-endpoint.sql
+```
 
-- **Alta utilização de CPU** (> 80%)
-- **Baixo Page Life Expectancy** (< 300 segundos)
-- **Banco de dados offline ou suspect**
-- **Falha em backup**
-- **Deadlocks frequentes**
-- **Lentidão em queries**
-- **Disk space baixo** (< 10%)
+## 📊 Monitoramento
 
-## 📊 Dashboards
+Monitorar o status do mirroring:
 
-### Zabbix Dashboard
+```sql
+-- Verificar status
+SELECT
+    DB_NAME(database_id) AS DatabaseName,
+    mirroring_state,
+    mirroring_state_desc,
+    mirroring_role,
+    mirroring_role_desc,
+    mirroring_safety_level,
+    mirroring_safety_level_desc,
+    mirroring_partner_name,
+    mirroring_witness_name
+FROM sys.database_mirroring
+WHERE mirroring_guid IS NOT NULL;
+GO
+```
 
-O Zabbix fornece dashboards nativos com:
-- Monitoramento em tempo real
-- Gráficos de histórico
-- Mapas de rede
-- Status de alertas
-- Últimos problemas
+Saídas possíveis:
 
-Acesse: `http://seu-ip-ubuntu/zabbix/zabbix.php?action=dashboard.view`
-
-### Grafana Dashboard
-
-Dashboards customizados com visualização avançada:
-
-**Painéis Principais:**
-
-1. **SQL Server Overview**
-   - Status geral da instância
-   - Métricas de CPU, Memória, Disco
-   - Conexões ativas
-   - Transações por segundo
-
-2. **Database Performance**
-   - Tamanho dos bancos de dados
-   - Performance por banco
-   - Queries lentas
-   - Deadlocks e bloqueios
-
-3. **Resource Utilization**
-   - Histórico de CPU
-   - Uso de memória
-   - I/O de disco
-   - Latência de rede
-
-4. **Alerts & Events**
-   - Lista de alertas
-   - Histórico de eventos
-   - Severidade por período
-   - Tempo de resposta
-
-**Como Importar Dashboards no Grafana:**
-
-1. Acesse `http://seu-ip-ubuntu:3000`
-2. Dashboards → Import
-3. Carregue os arquivos JSON dos dashboards ou use o ID do Grafana.com
-4. Configure o datasource Zabbix
-5. Clique em Import
+| Estado | Descrição |
+|--------|-----------|
+| 0 | Suspended |
+| 1 | Disconnected |
+| 2 | Synchronizing |
+| 3 | Pending Failover |
+| 4 | Synchronized |
+| 5 | **Principal** (Ativo) |
+| 6 | **Mirror** (Inativo) |
 
 ## 🔧 Troubleshooting
 
-### Problemas Comuns
+### Problema: Estado "Suspended"
 
-#### Zabbix Agent não conecta ao Server
+```sql
+-- Verificar erro no log
+EXEC sp_readerrorlog;
 
-```bash
-# Verificar status no Windows
-Get-Service ZabbixAgent
+-- Verificar conectividade
+SELECT * FROM sys.dm_exec_connections;
 
-# Verificar logs
-Get-Content "C:\Program Files\Zabbix Agent\zabbix_agentd.log"
-
-# Testar conectividade
-Test-NetConnection IP_DO_UBUNTU -Port 10050
-
-# Verificar firewall Windows
-Get-NetFirewallRule -DisplayName "Zabbix Agent*"
+-- Reiniciar mirroring
+ALTER DATABASE SuaDatabase SET PARTNER RESUME;
 ```
 
-#### Métricas não sendo coletadas do SQL Server
+### Problema: Falha no Failover Automático
 
-```powershell
-# Verificar permissões SQL
-# Conecte no SQL Server e execute:
-SELECT HAS_PERMS_BY_NAME(NULL, NULL, 'VIEW SERVER STATE');
--- Deve retornar 1
+```sql
+-- Verificar se o witness está configurado
+SELECT mirroring_witness_state, mirroring_witness_state_desc
+FROM sys.database_mirroring;
 
-# Testar consulta manualmente
-sqlcmd -S localhost -U zabbix_monitor -P senha_segura -Q "SELECT @@VERSION"
+-- Verificar conectividade com o witness
+ALTER DATABASE SuaDatabase SET WITNESS = 'TCP://WitnessServer:5022';
 ```
 
-#### Grafana não conecta ao Zabbix
+> 🐛 **Solução de problemas completa**: Veja [docs/05-troubleshooting.md](docs/05-troubleshooting.md)
 
-```bash
-# Verificar API do Zabbix
-curl -s -X POST http://localhost/zabbix/api_jsonrpc.php \
--H 'Content-Type: application/json' \
--d '{"jsonrpc":"2.0","method":"apiinfo.version","auth":null,"id":1}'
+## ✨ Melhores Práticas
 
-# Verificar logs do Grafana
-sudo journalctl -u grafana-server -f
-```
+### 🎯 Recomendações
 
-#### Alto consumo de recursos no Zabbix Server
+1. **Teste Regularmente**
+   - Simule failovers regularmente
+   - Teste o procedimento de recuperação
 
-```bash
-# Ajustar configuração do Zabbix Server
-sudo nano /etc/zabbix/zabbix_server.conf
+2. **Monitore Continuamente**
+   - Configure alertas para eventos de falha
+   - Monitore atraso de sincronização
 
-# Parâmetros importantes:
-StartPollers=10
-StartPingers=10
-StartTrappers=10
-StartDiscoverers=10
-CacheSize=256M
-HistoryCacheSize=64M
-HistoryIndexCacheSize=16M
-Timeout=30
+3. **Documente Tudo**
+   - Mantenha procedimentos atualizados
+   - Documente as configurações
 
-# Reiniciar serviço
-sudo systemctl restart zabbix-server
-```
+4. **Rede**
+   - Use rede dedicada para o tráfego de mirroring
+   - Configure Quality of Service (QoS)
 
-### Comandos Úteis
+5. **Backup**
+   - Continue fazendo backups regulares
+   - Teste restores dos backups
 
-**Ubuntu Server:**
-```bash
-# Verificar status Zabbix
-sudo systemctl status zabbix-server zabbix-agent
+> 📖 **Melhores práticas completas**: Veja [docs/06-melhores-praticas.md](docs/06-melhores-praticas.md)
 
-# Verificar logs
-sudo tail -f /var/log/zabbix/zabbix_server.log
-sudo tail -f /var/log/zabbix/zabbix_agentd.log
+## 🤝 Contribuindo
 
-# Reiniciar serviços
-sudo systemctl restart zabbix-server zabbix-agent apache2 grafana-server
+Contribuições são bem-vindas! Por favor:
 
-# Verificar banco de dados MySQL
-sudo mysql -u zabbix -p zabbix
-```
+1. Fork o repositório
+2. Crie uma branch para sua feature (`git checkout -b feature/MinhaFeature`)
+3. Commit suas mudanças (`git commit -m 'Adiciona nova feature'`)
+4. Push para a branch (`git push origin feature/MinhaFeature`)
+5. Abra um Pull Request
 
-**Windows Server:**
-```powershell
-# Verificar status do agent
-Get-Service ZabbixAgent
+## 📖 Recursos Adicionais
 
-# Verificar logs
-Get-Content "C:\Program Files\Zabbix Agent\zabbix_agentd.log" -Tail 50
+### Documentação Oficial
 
-# Reiniciar agente
-Restart-Service ZabbixAgent
+- [Database Mirroring (SQL Server) - Microsoft Learn](https://learn.microsoft.com/en-us/sql/database-engine/database-mirroring/database-mirroring-sql-server)
+- [Setting Up Database Mirroring - Microsoft Learn](https://learn.microsoft.com/en-us/sql/database-engine/database-mirroring/setting-up-database-mirroring-sql-server)
+- [Prerequisites, Restrictions, and Recommendations - Microsoft Learn](https://learn.microsoft.com/en-us/sql/database-engine/database-mirroring/prerequisites-restrictions-and-recommendations-for-database-mirroring)
 
-# Verificar conexão com SQL Server
-sqlcmd -L
-sqlcmd -S localhost -Q "SELECT @@VERSION"
-```
+### Vídeos Recomendados
 
-## 🛠️ Configuração Avançada
+- [SQL Server Database Mirroring Step by Step - YouTube](https://www.youtube.com/watch?v=rF0OmZt0ols)
 
-### Notificações por Email
+### Tutoriais e Artigos
 
-No Zabbix:
-1. Administration → Media types → Email → Configure
-2. Defina servidor SMTP, porta, e-mail de envio
-3. Configure recipient: Administration → Users → Media → Add
+- [Configure SQL Server Database Mirroring with SSMS - MSSQLTips](https://www.mssqltips.com/sqlservertip/2464/configure-sql-server-database-mirroring-using-ssms)
+- [How to Configure Database Mirroring for SQL Server - TatvaSoft](https://www.tatvasoft.com/blog/how-to-configure-database-mirroring-for-sql-server)
+- [A Comprehensive Guide to Implementing Database Mirroring - Medium](https://medium.com/@rakesh.mr.0341/a-comprehensive-guide-to-implementing-database-mirroring-in-sql-server-9636a98dd0ac)
 
-### Notificações por Telegram/Slack
+## 📝 Licença
 
-Use os webhooks do Zabbix ou scripts personalizados em `/etc/zabbix/alertscripts/`.
+Este projeto está licenciado sob a Licença MIT - veja o arquivo [LICENSE](LICENSE) para detalhes.
 
-### Retenção de Dados
+## 🙋‍♂️ Suporte
 
-Configure a limpeza automática no Zabbix:
-1. Administration → General → Housekeeping
-2. Ajuste o período de retenção para:
-   - History: 14-30 dias
-   - Trends: 365 dias
+Encontrou um problema ou tem dúvidas?
 
-### Alta Disponibilidade
-
-Para ambientes de produção, considere:
-- Zabbix Proxy para ambientes remotos
-- Cluster MySQL ou PostgreSQL
-- Load balancer para múltiplos Grafana
-
-## 📚 Recursos Adicionais
-
-- [Documentação Oficial Zabbix](https://www.zabbix.com/documentation)
-- [Documentação Oficial Grafana](https://grafana.com/docs/)
-- [Zabbix Community](https://www.zabbix.com/forum/)
-
-## 🙏 Agradecimentos
-
-- Equipe Zabbix pela excelente ferramenta de monitoramento
-- Equipe Grafana pelos dashboards incríveis
-- Comunidade open-source por templates e scripts
+1. Verifique a [documentação](docs/)
+2. Procure no [troubleshooting](docs/05-troubleshooting.md)
+3. Abra uma [issue](../../issues) no GitHub
 
 ---
 
+⭐ **Se este repositório foi útil para você, considere dar uma estrela!**
 
+Feito com ❤️ para a comunidade de SQL Server
